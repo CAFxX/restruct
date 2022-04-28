@@ -14,6 +14,8 @@ func (r RawMatch) String() string {
 	return string(r)
 }
 
+type Position int
+
 type group struct {
 	index      int
 	fieldIndex []int
@@ -29,12 +31,16 @@ func Compile[T any](restr string) func(s string) (T, error) {
 	}
 
 	tRawMatch := reflect.TypeOf(RawMatch(""))
+	tPosition := reflect.TypeOf(Position(0))
 
 	var fm []group
 
-	raw, ok := t.FieldByName("RawMatch")
-	if ok && raw.Type == tRawMatch {
+	
+	if raw, ok := t.FieldByName("RawMatch"); ok && raw.Type == tRawMatch {
 		fm = append(fm, group{index: 0, fieldIndex: raw.Index})
+	}
+	if pos, ok := t.FieldByName("Position"); ok && pos.Type == tPosition {
+		fm = append(fm, group{index: -1, fieldIndex: pos.Index})
 	}
 
 	for gi, gn := range re.SubexpNames() {
@@ -43,9 +49,13 @@ func Compile[T any](restr string) func(s string) (T, error) {
 			continue
 		}
 		switch f.Type.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		case reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 			reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128:
+		case reflect.Int:
+			if f.Type == tPosition {
+				panic("field " + gn + " is not a valid type")
+			}
 		case reflect.String:
 			if f.Type == tRawMatch {
 				panic("field " + gn + " is not a valid type")
@@ -59,7 +69,7 @@ func Compile[T any](restr string) func(s string) (T, error) {
 	}
 
 	return func(s string) (r T, err error) {
-		m := re.FindStringSubmatch(s)
+		m := re.FindStringSubmatchIndex(s)
 		if m == nil {
 			var zero T
 			return zero, errNoMatch{}
@@ -67,7 +77,11 @@ func Compile[T any](restr string) func(s string) (T, error) {
 		v := reflect.ValueOf(&r).Elem()
 		for _, g := range fm {
 			f := v.FieldByIndex(g.fieldIndex)
-			err := unmarshalAndSet(f, m[g.index])
+			if g.index == -1 {
+				f.SetInt(int64(m[0]))
+				continue
+			}
+			err := unmarshalAndSet(f, s[m[g.index*2]:m[g.index*2+1]])
 			if err != nil {
 				var zero T
 				return zero, fmt.Errorf("parsing field %s: %w", re.SubexpNames()[g.index], err)
