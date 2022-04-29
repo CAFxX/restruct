@@ -13,6 +13,7 @@ Matches can be parsed into the following field types:
 - `complexN`
 - `bool`
 - any type that implements [`encoding.TextUnmarshaler`](https://pkg.go.dev/encoding#TextUnmarshaler)
+  (e.g. [`time.Time`](https://pkg.go.dev/time#Time) or [`net.IP`](https://pkg.go.dev/net#IP)).
 
 ## Example
 
