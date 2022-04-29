@@ -63,7 +63,8 @@ func Compile[T any](restr string) func(s string) (T, error) {
 				panic("field " + gn + " is not a valid type")
 			}
 		default:
-			if !f.Type.Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()) && !reflect.PointerTo(f.Type).Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()) {
+			if !f.Type.Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()) &&
+				!reflect.PointerTo(f.Type).Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()) {
 				panic("field " + gn + " is not a valid type")
 			}
 		}

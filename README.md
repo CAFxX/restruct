@@ -1,6 +1,8 @@
 # restruct
 Parse regular expressions to structs.
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/CAFxX/restruct.svg)](https://pkg.go.dev/github.com/CAFxX/restruct)
+
 ## Supported conversions
 
 Matches can be parsed into the following field types:
