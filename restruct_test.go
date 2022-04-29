@@ -53,3 +53,82 @@ func TestArray(t *testing.T) {
 		t.Fatal("nil error")
 	}
 }
+
+func TestInt(t *testing.T) {
+	r, err := Compile[struct {
+		X int8
+	}](`(?P<X>[0-9]+)`)(`> 0123 <`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.X != 123 {
+		t.Fatal(r.X)
+	}
+
+	r, err = Compile[struct {
+		X int8
+	}](`(?P<X>[0-9]+)`)(`> 012345678 <`)
+	if err == nil {
+		t.Fatal("nil error")
+	}
+}
+
+func TestUint(t *testing.T) {
+	r, err := Compile[struct {
+		X uint8
+	}](`(?P<X>[0-9]+)`)(`> 0123 <`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.X != 123 {
+		t.Fatal(r.X)
+	}
+
+	r, err = Compile[struct {
+		X uint8
+	}](`(?P<X>[0-9]+)`)(`> 012345678 <`)
+	if err == nil {
+		t.Fatal("nil error")
+	}
+}
+
+func TestBool(t *testing.T) {
+	r, err := Compile[struct {
+		X bool
+	}](`(?P<X>[0-9]+)`)(`> 1 <`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.X != true {
+		t.Fatal(r.X)
+	}
+
+	r, err = Compile[struct {
+		X bool
+	}](`(?P<X>[0-9]+)`)(`> 0 <`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.X != false {
+		t.Fatal(r.X)
+	}
+
+	r, err = Compile[struct {
+		X bool
+	}](`(?P<X>[0-9]+)`)(`> 5 <`)
+	if err == nil {
+		t.Fatal("nil error")
+	}
+}
+
+func TestString(t *testing.T) {
+	r, err := Compile[struct {
+		X string
+	}](`(?P<X>[0-9]+)`)(`> 0123 <`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r.X != "0123" {
+		t.Fatal(r.X)
+	}
+}
