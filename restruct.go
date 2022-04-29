@@ -24,8 +24,7 @@ type group struct {
 func Compile[T any](restr string) func(s string) (T, error) {
 	re := regexp.MustCompile(restr)
 
-	var zero T
-	t := reflect.TypeOf(zero)
+	t := reflect.TypeOf(zero[T]())
 	if t.Kind() != reflect.Struct {
 		panic("type %s is not a struct")
 	}
@@ -35,7 +34,6 @@ func Compile[T any](restr string) func(s string) (T, error) {
 
 	var fm []group
 
-	
 	if raw, ok := t.FieldByName("RawMatch"); ok && raw.Type == tRawMatch {
 		fm = append(fm, group{index: 0, fieldIndex: raw.Index})
 	}
@@ -60,6 +58,10 @@ func Compile[T any](restr string) func(s string) (T, error) {
 			if f.Type == tRawMatch {
 				panic("field " + gn + " is not a valid type")
 			}
+		case reflect.Slice, reflect.Array:
+			if f.Type.Elem().Kind() != reflect.Uint8 {
+				panic("field " + gn + " is not a valid type")
+			}
 		default:
 			if !f.Type.Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()) && !reflect.PointerTo(f.Type).Implements(reflect.TypeOf((*encoding.TextUnmarshaler)(nil)).Elem()) {
 				panic("field " + gn + " is not a valid type")
@@ -71,8 +73,7 @@ func Compile[T any](restr string) func(s string) (T, error) {
 	return func(s string) (r T, err error) {
 		m := re.FindStringSubmatchIndex(s)
 		if m == nil {
-			var zero T
-			return zero, errNoMatch{}
+			return zero[T](), errNoMatch{}
 		}
 		v := reflect.ValueOf(&r).Elem()
 		for _, g := range fm {
@@ -83,8 +84,7 @@ func Compile[T any](restr string) func(s string) (T, error) {
 			}
 			err := unmarshalAndSet(f, s[m[g.index*2]:m[g.index*2+1]])
 			if err != nil {
-				var zero T
-				return zero, fmt.Errorf("parsing field %s: %w", re.SubexpNames()[g.index], err)
+				return zero[T](), fmt.Errorf("parsing field %s: %w", re.SubexpNames()[g.index], err)
 			}
 		}
 		return r, nil
@@ -98,6 +98,10 @@ func (errNoMatch) Error() string { return "no match" }
 type errUnsupportedKind struct{}
 
 func (errUnsupportedKind) Error() string { return "unsupported kind" }
+
+type errArrayOverflow struct{}
+
+func (errArrayOverflow) Error() string { return "array too short" }
 
 func unmarshalAndSet(v reflect.Value, s string) error {
 	switch v.Kind() {
@@ -131,6 +135,13 @@ func unmarshalAndSet(v reflect.Value, s string) error {
 			return err
 		}
 		v.SetComplex(i)
+	case reflect.Slice:
+		v.Set(reflect.ValueOf([]byte(s)))
+	case reflect.Array:
+		n := copy(v.Slice(0, v.Len()).Interface().([]byte), s)
+		if n < len(s) {
+			return errArrayOverflow{}
+		}
 	case reflect.String:
 		v.SetString(s)
 	default:
@@ -143,3 +154,5 @@ func unmarshalAndSet(v reflect.Value, s string) error {
 	}
 	return nil
 }
+
+func zero[T any]() (zero T) { return }
